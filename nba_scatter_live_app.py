@@ -30,12 +30,12 @@ def load_nba_data(season="2023-24"):
     Retries a few times with a longer timeout to avoid transient failures on stats.nba.com.
     """
     last_err = None
-    for attempt_idx in range(3):
+    for attempt_idx in range(1):
         try:
             stats = LeagueDashPlayerStats(
                 season=season,
                 per_mode_detailed="PerGame",
-                timeout=60,
+                timeout=15,
                 headers=NBA_REQUEST_HEADERS,
             )
             df = stats.get_data_frames()[0]
