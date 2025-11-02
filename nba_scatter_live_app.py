@@ -5,7 +5,24 @@ import streamlit as st
 from nba_api.stats.endpoints import LeagueDashPlayerStats
 import numpy as np
 import time
+from pathlib import Path
 
+# Headers to avoid Akamai blocking requests from cloud IPs
+NBA_REQUEST_HEADERS = {
+    "Host": "stats.nba.com",
+    "Connection": "keep-alive",
+    "Pragma": "no-cache",
+    "Cache-Control": "no-cache",
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://www.nba.com/",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Origin": "https://www.nba.com",
+}
 # --- 1️⃣ Function to load live NBA player data ---
 @st.cache_data(ttl=3600)
 def load_nba_data(season="2023-24"):
@@ -19,6 +36,7 @@ def load_nba_data(season="2023-24"):
                 season=season,
                 per_mode_detailed="PerGame",
                 timeout=60,
+                headers=NBA_REQUEST_HEADERS,
             )
             df = stats.get_data_frames()[0]
             return df
@@ -26,6 +44,12 @@ def load_nba_data(season="2023-24"):
             last_err = err
             time.sleep(2 * (attempt_idx + 1))
     raise last_err
+
+
+def load_demo_data() -> pd.DataFrame:
+    sample_csv = Path(__file__).parent / "sample_data" / "player_stats_2023_24_sample.csv"
+    df_demo = pd.read_csv(sample_csv)
+    return df_demo
 
 
 # --- 2️⃣ Streamlit UI setup ---
@@ -44,11 +68,15 @@ with st.spinner(f"Loading {selected_season} data..."):
     try:
         df = load_nba_data(season=selected_season)
     except Exception as load_err:
-        st.error(
-            "Could not load NBA data right now (network timeout). Please refresh or try again in a moment."
-        )
-        st.caption(f"Details: {load_err}")
-        st.stop()
+        try:
+            df = load_demo_data()
+            st.info("Using demo data because live NBA Stats API timed out.")
+        except Exception:
+            st.error(
+                "Could not load NBA data right now (network timeout). Please refresh or try again in a moment."
+            )
+            st.caption(f"Details: {load_err}")
+            st.stop()
 
 st.success(f"✅ Loaded {len(df)} player records for {selected_season}.")
 
