@@ -4,14 +4,28 @@ import altair as alt
 import streamlit as st
 from nba_api.stats.endpoints import LeagueDashPlayerStats
 import numpy as np
+import time
 
 # --- 1️⃣ Function to load live NBA player data ---
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_nba_data(season="2023-24"):
-    """Load live NBA player statistics from NBA Stats API for the selected season."""
-    stats = LeagueDashPlayerStats(season=season, per_mode_detailed="PerGame")
-    df = stats.get_data_frames()[0]
-    return df
+    """Load live NBA player statistics from NBA Stats API for the selected season.
+    Retries a few times with a longer timeout to avoid transient failures on stats.nba.com.
+    """
+    last_err = None
+    for attempt_idx in range(3):
+        try:
+            stats = LeagueDashPlayerStats(
+                season=season,
+                per_mode_detailed="PerGame",
+                timeout=60,
+            )
+            df = stats.get_data_frames()[0]
+            return df
+        except Exception as err:  # network flakiness / timeouts
+            last_err = err
+            time.sleep(2 * (attempt_idx + 1))
+    raise last_err
 
 
 # --- 2️⃣ Streamlit UI setup ---
@@ -27,7 +41,14 @@ selected_season = st.selectbox("Select Season", seasons, index=0)
 
 # --- 4️⃣ Load data ---
 with st.spinner(f"Loading {selected_season} data..."):
-    df = load_nba_data(season=selected_season)
+    try:
+        df = load_nba_data(season=selected_season)
+    except Exception as load_err:
+        st.error(
+            "Could not load NBA data right now (network timeout). Please refresh or try again in a moment."
+        )
+        st.caption(f"Details: {load_err}")
+        st.stop()
 
 st.success(f"✅ Loaded {len(df)} player records for {selected_season}.")
 
