@@ -88,7 +88,7 @@ def _load_shots_df() -> pd.DataFrame:
     df_small["timeActual"] = pd.to_datetime(df_small["timeActual"])  # ensure dtype
     return df_small
 
-def _build_shot_chart_spec(df: pd.DataFrame) -> dict:
+def _build_shot_chart_spec(df: pd.DataFrame):
     alt.data_transformers.disable_max_rows()
 
     court_df = _make_court_df()
@@ -151,19 +151,20 @@ def _build_shot_chart_spec(df: pd.DataFrame) -> dict:
         .configure_axis(grid=False, domain=False, ticks=False, labels=False)
     )
 
-    return chart.to_dict()
+    return chart.to_dict(), slider_max
 
 @app.get("/shots")
 def shots():
     df = _load_shots_df()
-    chart_spec = _build_shot_chart_spec(df)
+    chart_spec, slider_max = _build_shot_chart_spec(df)
     return (
         """
         <!doctype html>
-        <html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NBA Shot Chart</title>\n<style>\n  html, body { margin: 0; padding: 0; height: 100%; }\n  .frame-wrap { height: 100vh; width: 100%; display: flex; flex-direction: column; }\n  header { padding: 12px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border-bottom: 1px solid #eee; }\n  header h1 { font-size: 18px; margin: 0; }\n  #vis { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }\n</style>\n\n<script src=\"https://cdn.jsdelivr.net/npm/vega@5\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/vega-lite@5\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/vega-embed@6\"></script>\n</head>\n<body>\n  <div class=\"frame-wrap\">\n    <header>\n      <h1>NBA Shot Chart</h1>\n    </header>\n    <div id=\"vis\"></div>\n  </div>\n  <script>\n    const spec = REPLACE_SPEC;\n    vegaEmbed('#vis', spec, {actions: false});\n  </script>\n</body>\n</html>
+        <html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NBA Shot Chart</title>\n<style>\n  html, body { margin: 0; padding: 0; height: 100%; }\n  .frame-wrap { height: 100vh; width: 100%; display: flex; flex-direction: column; }\n  header { padding: 12px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border-bottom: 1px solid #eee; }\n  header h1 { font-size: 18px; margin: 0; }\n  .controls { padding: 8px 16px; }\n  #vis { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }\n</style>\n\n<script src=\"https://cdn.jsdelivr.net/npm/vega@5\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/vega-lite@5\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/vega-embed@6\"></script>\n</head>\n<body>\n  <div class=\"frame-wrap\">\n    <header>\n      <h1>NBA Shot Chart</h1>\n    </header>\n    <div class=\"controls\">\n      <button id=\"play\">▶ Play</button>\n      <button id=\"pause\">❚❚ Pause</button>\n    </div>\n    <div id=\"vis\"></div>\n  </div>\n  <script>\n    const spec = REPLACE_SPEC;\n    const SLIDER_MAX = REPLACE_MAX;\n    vegaEmbed('#vis', spec, {actions: false}).then((res) => {\n      const view = res.view;\n      let running = false;\n      let current = 1;\n      const stepMs = 400;\n      function tick(){\n        if(!running) return;\n        current = current >= SLIDER_MAX ? 1 : current + 1;\n        view.signal('gstart', current).run();\n        setTimeout(tick, stepMs);\n      }\n      document.getElementById('play').addEventListener('click', () => {\n        if(!running){ running = true; tick(); }\n      });\n      document.getElementById('pause').addEventListener('click', () => { running = false; });\n    });\n  </script>\n</body>\n</html>
         """
         .replace("REPLACE_SPEC", json.dumps(chart_spec))
-    )
+        .replace("REPLACE_MAX", json.dumps(slider_max))
+        )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
