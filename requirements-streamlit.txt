@@ -3,4 +3,5 @@ pandas
 altair
 numpy
 nba_api
+httpx
 

@@ -5,6 +5,8 @@ import streamlit as st
 from nba_api.stats.endpoints import LeagueDashPlayerStats
 import numpy as np
 import time
+import os
+import httpx
 from pathlib import Path
 
 # Headers to avoid Akamai blocking requests from cloud IPs
@@ -22,6 +24,8 @@ NBA_REQUEST_HEADERS = {
     "Referer": "https://www.nba.com/",
     "Accept-Language": "en-US,en;q=0.9",
     "Origin": "https://www.nba.com",
+    "x-nba-stats-origin": "stats",
+    "x-nba-stats-token": "true",
 }
 # --- 1️⃣ Function to load live NBA player data ---
 @st.cache_data(ttl=3600)
@@ -32,17 +36,40 @@ def load_nba_data(season="2023-24"):
     last_err = None
     for attempt_idx in range(1):
         try:
-            stats = LeagueDashPlayerStats(
-                season=season,
-                per_mode_detailed="PerGame",
-                timeout=15,
-                headers=NBA_REQUEST_HEADERS,
-            )
-            df = stats.get_data_frames()[0]
-            return df
+            # Prefer HTTP/2 direct call with httpx; NBA APIs sometimes behave better with it
+            url = "https://stats.nba.com/stats/leaguedashplayerstats"
+            params = {
+                "Season": season,
+                "PerMode": "PerGame",
+                "SeasonType": "Regular Season",
+                "MeasureType": "Base",
+            }
+            proxy_url = os.environ.get("NBA_PROXY") or None
+            with httpx.Client(http2=True, headers=NBA_REQUEST_HEADERS, timeout=15, proxies=proxy_url) as client:
+                resp = client.get(url, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+                result = data.get("resultSets") or [data.get("resultSet")]
+                result = [r for r in result if r]
+                cols = result[0]["headers"]
+                rows = result[0]["rowSet"]
+                df = pd.DataFrame(rows, columns=cols)
+                return df
         except Exception as err:  # network flakiness / timeouts
             last_err = err
-            time.sleep(2 * (attempt_idx + 1))
+            # Fallback to nba_api (requests) once before giving up
+            try:
+                stats = LeagueDashPlayerStats(
+                    season=season,
+                    per_mode_detailed="PerGame",
+                    timeout=15,
+                    headers=NBA_REQUEST_HEADERS,
+                    proxy=os.environ.get("NBA_PROXY") or None,
+                )
+                df = stats.get_data_frames()[0]
+                return df
+            except Exception:
+                time.sleep(1)
     raise last_err
 
 
