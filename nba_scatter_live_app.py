@@ -80,6 +80,12 @@ def load_demo_data() -> pd.DataFrame:
     return df_demo
 
 
+def load_snapshot_data(season: str) -> pd.DataFrame:
+    snap_name = f"player_stats_{season.replace('/', '-').replace(' ', '_')}_snapshot.csv"
+    snap_csv = Path(__file__).parent / "sample_data" / snap_name
+    return pd.read_csv(snap_csv)
+
+
 # --- 2️⃣ Streamlit UI setup ---
 st.title("🏀 NBA Player Stats Explorer")
 st.markdown("""
@@ -96,15 +102,21 @@ with st.spinner(f"Loading {selected_season} data..."):
     try:
         df = load_nba_data(season=selected_season)
     except Exception as load_err:
+        # Try repo snapshot first
         try:
-            df = load_demo_data()
-            st.info("Using demo data because live NBA Stats API timed out.")
+            df = load_snapshot_data(selected_season)
+            st.info("Using repo snapshot because live NBA Stats API timed out.")
         except Exception:
-            st.error(
-                "Could not load NBA data right now (network timeout). Please refresh or try again in a moment."
-            )
-            st.caption(f"Details: {load_err}")
-            st.stop()
+            # Then fall back to small built-in demo
+            try:
+                df = load_demo_data()
+                st.info("Using demo data because live NBA Stats API timed out.")
+            except Exception:
+                st.error(
+                    "Could not load NBA data right now (network timeout). Please refresh or try again in a moment."
+                )
+                st.caption(f"Details: {load_err}")
+                st.stop()
 
 st.success(f"✅ Loaded {len(df)} player records for {selected_season}.")
 
