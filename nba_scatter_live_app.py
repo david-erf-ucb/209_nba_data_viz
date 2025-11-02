@@ -39,6 +39,7 @@ def load_nba_data(season="2023-24"):
             # Prefer HTTP/2 direct call with httpx; NBA APIs sometimes behave better with it
             url = "https://stats.nba.com/stats/leaguedashplayerstats"
             params = {
+                "LeagueID": "00",
                 "Season": season,
                 "PerMode": "PerGame",
                 "SeasonType": "Regular Season",
