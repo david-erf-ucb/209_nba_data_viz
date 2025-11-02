@@ -226,7 +226,7 @@ if st.checkbox("Add regression trendline"):
         st.warning(f"⚠️ Trendline could not be added: {e}")
 
 # --- 11️⃣ Display chart ---
-st.altair_chart(scatter, use_container_width=True)
+st.altair_chart(scatter, width='stretch')
 
 # --- 12️⃣ Correlation coefficient ---
 corr = df[x_var].corr(df[y_var])
