@@ -1,3 +1,21 @@
+# Data
+sample_data/*.parquet
+*.parquet
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs
+flask.out
+streamlit.out
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
 __pycache__/
 .env
 venv/

@@ -76,9 +76,13 @@ def _make_court_df():
 
 def _load_shots_df() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.join(base_dir, "data", "pbp_small.parquet")
-    if os.path.exists(data_path):
-        df_small = pd.read_parquet(data_path)
+    # Prefer explicit path via env var; fallback to repo sample_data
+    parquet_path = os.environ.get(
+        "NBA_PBP_PARQUET_PATH",
+        os.path.join(base_dir, "sample_data", "nba_pbp_combined.parquet"),
+    )
+    if os.path.exists(parquet_path):
+        df_small = pd.read_parquet(parquet_path)
     else:
         df_small = pd.DataFrame({
             "playerNameI": ["V. Wembanyama"] * 5,
@@ -90,7 +94,23 @@ def _load_shots_df() -> pd.DataFrame:
             "Season": ["2023-24"] * 5,
             "game_number": [1, 2, 3, 4, 5],
         })
-    df_small["timeActual"] = pd.to_datetime(df_small["timeActual"])  # ensure dtype
+    # Ensure datetime
+    if "timeActual" in df_small.columns:
+        df_small["timeActual"] = pd.to_datetime(df_small["timeActual"])  # ensure dtype
+    # Backfill game_number if missing
+    if "game_number" not in df_small.columns and {"playerNameI", "gameid", "timeActual"}.issubset(df_small.columns):
+        player_games = (
+            df_small[["playerNameI", "gameid", "timeActual"]]
+            .dropna(subset=["timeActual"])  # only valid timestamps contribute
+            .drop_duplicates(["playerNameI", "gameid"])  # one row per game
+            .sort_values(["playerNameI", "timeActual", "gameid"])
+        )
+        player_games["game_number"] = player_games.groupby("playerNameI").cumcount() + 1
+        df_small = df_small.merge(
+            player_games[["playerNameI", "gameid", "game_number"]],
+            on=["playerNameI", "gameid"],
+            how="left",
+        )
     return df_small
 
 def _build_shot_chart_spec(df: pd.DataFrame):
