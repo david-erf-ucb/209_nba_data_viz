@@ -263,6 +263,7 @@ def shots():
     # Read optional query params
     season_param = request.args.get("season") or None
     player_param = request.args.get("player") or None
+    mode_param = (request.args.get("mode") or "").strip().lower()
     try:
         limit_param = int(request.args.get("limit", "50000"))
     except Exception:
@@ -271,9 +272,11 @@ def shots():
 
     # Prefer fast, memory-safe DuckDB path if available; otherwise fallback to legacy loader.
     try:
+        print(f"[shots] querying: season={season_param} player={player_param} limit={limit_param}")
         df = _query_shots_df(season=season_param, player=player_param, limit_points=limit_param)
     except Exception:
         # Lightweight fallback: avoid loading full parquet to prevent OOM
+        print("[shots] query failed; returning empty frame fallback")
         df = pd.DataFrame({
             "playerNameI": pd.Series(dtype="object"),
             "gameid": pd.Series(dtype="object"),
@@ -284,6 +287,25 @@ def shots():
             "Season": pd.Series(dtype="object"),
             "game_number": pd.Series(dtype="int"),
         })
+    # Summary-only mode to avoid heavy chart building while debugging
+    if mode_param == "summary":
+        try:
+            players = sorted(df["playerNameI"].dropna().unique().tolist())[:10]
+        except Exception:
+            players = []
+        summary = {
+            "rows": int(len(df)),
+            "players_preview": players,
+            "season": season_param,
+            "player_filter": player_param,
+            "limit": int(limit_param),
+        }
+        return app.response_class(
+            response=json.dumps(summary),
+            status=200,
+            mimetype="application/json",
+        )
+    print(f"[shots] building chart for {len(df)} rows")
     chart_spec, slider_max = _build_shot_chart_spec(df)
     return (
         """
