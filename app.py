@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 import altair as alt
+from typing import Optional
 try:
     import duckdb  # optional; used when partitioned dataset is available
 except Exception:  # pragma: no cover
@@ -91,7 +92,7 @@ def _dataset_dir() -> str:
         return explicit
     return os.path.join(base_dir, "sample_data", "partitioned_shots")
 
-def _query_shots_df(season: str | None = None, player: str | None = None, limit_points: int = 200_000) -> pd.DataFrame:
+def _query_shots_df(season: Optional[str] = None, player: Optional[str] = None, limit_points: int = 200_000) -> pd.DataFrame:
     """
     Query from partitioned parquet dataset using DuckDB with projection/predicate pushdown.
     Requires DuckDB and a valid dataset directory. If season is None, chooses the max Season.
