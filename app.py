@@ -104,24 +104,27 @@ def _query_shots_df(season: Optional[str] = None, player: Optional[str] = None, 
     if not os.path.isdir(dataset):
         raise FileNotFoundError(f"Partitioned dataset directory not found: {dataset}")
 
+    # Build a glob path for DuckDB to scan partitions
+    glob_path = os.path.join(dataset, "**")
+
     # Determine default Season (latest) if not provided
     if season is None:
         season_df = duckdb.sql("""
             SELECT MAX(Season) AS Season
-            FROM read_parquet(? || '/**', hive_partitioning=1)
-        """, [dataset]).df()
+            FROM read_parquet(?, hive_partitioning=1)
+        """, [glob_path]).df()
         season = season_df.iloc[0]["Season"]
 
     # Build parameterized SQL
     sql = """
       SELECT playerNameI, gameid, timeActual, x, y, shotResult, Season
-      FROM read_parquet(? || '/**', hive_partitioning=1)
+      FROM read_parquet(?, hive_partitioning=1)
       WHERE Season = ?
       {player_filter}
       LIMIT ?
     """
     player_filter = "AND playerNameI = ?" if player else ""
-    params = [dataset, season] + ([player] if player else []) + [int(limit_points)]
+    params = [glob_path, season] + ([player] if player else []) + [int(limit_points)]
     df_small = duckdb.sql(sql.format(player_filter=player_filter), params).df()
 
     # Ensure datetime
@@ -263,7 +266,17 @@ def shots():
     try:
         df = _query_shots_df(season=season_param, player=player_param, limit_points=limit_param)
     except Exception:
-        df = _load_shots_df()
+        # Lightweight fallback: avoid loading full parquet to prevent OOM
+        df = pd.DataFrame({
+            "playerNameI": pd.Series(dtype="object"),
+            "gameid": pd.Series(dtype="object"),
+            "timeActual": pd.Series(dtype="datetime64[ns]"),
+            "x": pd.Series(dtype="float"),
+            "y": pd.Series(dtype="float"),
+            "shotResult": pd.Series(dtype="object"),
+            "Season": pd.Series(dtype="object"),
+            "game_number": pd.Series(dtype="int"),
+        })
     chart_spec, slider_max = _build_shot_chart_spec(df)
     return (
         """
