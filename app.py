@@ -4,6 +4,10 @@ import os
 import pandas as pd
 import numpy as np
 import altair as alt
+try:
+    import duckdb  # optional; used when partitioned dataset is available
+except Exception:  # pragma: no cover
+    duckdb = None
 app = Flask(__name__)
 
 @app.get("/")
@@ -73,6 +77,71 @@ def _make_court_df():
         three_arc,
     ], ignore_index=True)
     return court_df
+
+def _dataset_dir() -> str:
+    """
+    Resolve the preferred dataset directory (partitioned parquet).
+    Priority:
+      1) NBA_PBP_DATASET_DIR env var (explicit override)
+      2) repo sample_data/partitioned_shots (Option B symlink target)
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    explicit = os.environ.get("NBA_PBP_DATASET_DIR", "").strip()
+    if explicit:
+        return explicit
+    return os.path.join(base_dir, "sample_data", "partitioned_shots")
+
+def _query_shots_df(season: str | None = None, player: str | None = None, limit_points: int = 200_000) -> pd.DataFrame:
+    """
+    Query from partitioned parquet dataset using DuckDB with projection/predicate pushdown.
+    Requires DuckDB and a valid dataset directory. If season is None, chooses the max Season.
+    """
+    if duckdb is None:
+        raise RuntimeError("DuckDB not available")
+
+    dataset = _dataset_dir()
+    if not os.path.isdir(dataset):
+        raise FileNotFoundError(f"Partitioned dataset directory not found: {dataset}")
+
+    # Determine default Season (latest) if not provided
+    if season is None:
+        season_df = duckdb.sql("""
+            SELECT MAX(Season) AS Season
+            FROM read_parquet(? || '/**', hive_partitioning=1)
+        """, [dataset]).df()
+        season = season_df.iloc[0]["Season"]
+
+    # Build parameterized SQL
+    sql = """
+      SELECT playerNameI, gameid, timeActual, x, y, shotResult, Season
+      FROM read_parquet(? || '/**', hive_partitioning=1)
+      WHERE Season = ?
+      {player_filter}
+      LIMIT ?
+    """
+    player_filter = "AND playerNameI = ?" if player else ""
+    params = [dataset, season] + ([player] if player else []) + [int(limit_points)]
+    df_small = duckdb.sql(sql.format(player_filter=player_filter), params).df()
+
+    # Ensure datetime
+    if "timeActual" in df_small.columns:
+        df_small["timeActual"] = pd.to_datetime(df_small["timeActual"])
+
+    # Backfill game_number (per player chronological order)
+    if {"playerNameI", "gameid", "timeActual"}.issubset(df_small.columns):
+        player_games = (
+            df_small[["playerNameI", "gameid", "timeActual"]]
+            .dropna(subset=["timeActual"])
+            .drop_duplicates(["playerNameI", "gameid"])
+            .sort_values(["playerNameI", "timeActual", "gameid"])
+        )
+        player_games["game_number"] = player_games.groupby("playerNameI").cumcount() + 1
+        df_small = df_small.merge(
+            player_games[["playerNameI", "gameid", "game_number"]],
+            on=["playerNameI", "gameid"],
+            how="left",
+        )
+    return df_small
 
 def _load_shots_df() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -180,7 +249,11 @@ def _build_shot_chart_spec(df: pd.DataFrame):
 
 @app.get("/shots")
 def shots():
-    df = _load_shots_df()
+    # Prefer fast, memory-safe DuckDB path if available; otherwise fallback to legacy loader.
+    try:
+        df = _query_shots_df()
+    except Exception:
+        df = _load_shots_df()
     chart_spec, slider_max = _build_shot_chart_spec(df)
     return (
         """
