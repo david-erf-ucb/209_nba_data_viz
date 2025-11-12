@@ -112,7 +112,7 @@ def _query_shots_df(season: Optional[str] = None, player: Optional[str] = None, 
         season_df = duckdb.sql("""
             SELECT MAX(Season) AS Season
             FROM read_parquet(?, hive_partitioning=1)
-        """, [glob_path]).df()
+        """, params=[glob_path]).df()
         season = season_df.iloc[0]["Season"]
 
     # Build parameterized SQL
@@ -125,7 +125,7 @@ def _query_shots_df(season: Optional[str] = None, player: Optional[str] = None, 
     """
     player_filter = "AND playerNameI = ?" if player else ""
     params = [glob_path, season] + ([player] if player else []) + [int(limit_points)]
-    df_small = duckdb.sql(sql.format(player_filter=player_filter), params).df()
+    df_small = duckdb.sql(sql.format(player_filter=player_filter), params=params).df()
 
     # Ensure datetime
     if "timeActual" in df_small.columns:
