@@ -120,6 +120,11 @@ def _query_shots_df(season: Optional[str] = None, player: Optional[str] = None, 
       SELECT playerNameI, gameid, timeActual, x, y, shotResult, Season
       FROM read_parquet(?, hive_partitioning=1)
       WHERE Season = ?
+        AND x IS NOT NULL AND y IS NOT NULL
+        AND timeActual IS NOT NULL
+        AND shotResult IS NOT NULL
+        AND x BETWEEN 0 AND 100
+        AND y BETWEEN 0 AND 100
       {player_filter}
       LIMIT ?
     """
@@ -209,7 +214,9 @@ def _build_shot_chart_spec(df: pd.DataFrame):
     player_param = alt.param("player_sel", bind=player_dropdown, value=players[0])
 
     window_size = 40
-    max_games = int(df["game_number"].max()) if len(df) else 1
+    # Robust slider upper bound even if game_number has nulls
+    max_game_val = pd.to_numeric(df.get("game_number"), errors="coerce").max() if len(df) else 1
+    max_games = int(max_game_val) if pd.notna(max_game_val) else 1
     slider_max = max(1, max_games - window_size + 1)
     window_slider = alt.binding_range(min=1, max=slider_max, step=1, name="Start game #: ")
     window_param = alt.param("gstart", bind=window_slider, value=1)
