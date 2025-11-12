@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 import json
 import os
 import pandas as pd
@@ -250,9 +250,18 @@ def _build_shot_chart_spec(df: pd.DataFrame):
 
 @app.get("/shots")
 def shots():
+    # Read optional query params
+    season_param = request.args.get("season") or None
+    player_param = request.args.get("player") or None
+    try:
+        limit_param = int(request.args.get("limit", "50000"))
+    except Exception:
+        limit_param = 50000
+    limit_param = max(1000, min(limit_param, 200_000))  # safety bounds
+
     # Prefer fast, memory-safe DuckDB path if available; otherwise fallback to legacy loader.
     try:
-        df = _query_shots_df()
+        df = _query_shots_df(season=season_param, player=player_param, limit_points=limit_param)
     except Exception:
         df = _load_shots_df()
     chart_spec, slider_max = _build_shot_chart_spec(df)
