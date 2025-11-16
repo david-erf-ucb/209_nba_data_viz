@@ -11,19 +11,15 @@ def hello():
     return (
         """
         <!doctype html>
-        <html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NBA Data Visualizations</title>\n<style>\n  :root { --bg:#0b1020; --card:#131a33; --text:#f2f4ff; --muted:#aab1d6; --accent:#5b8cff; }\n  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); }\n  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }\n  .wrap { min-height:100vh; display:flex; flex-direction:column; }\n  header { padding:24px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }\n  header h1 { margin:0; font-size:22px; letter-spacing:0.2px; }\n  header p { margin:6px 0 0; color:var(--muted); font-size:14px; }\n  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; padding:20px; max-width:1000px; width:100%; margin:0 auto; }\n  .card { background:var(--card); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }\n  .card h2 { margin:0; font-size:18px; }\n  .card p { margin:0; color:var(--muted); line-height:1.45; }\n  .actions { margin-top:auto; }\n  .btn { display:inline-block; background:var(--accent); color:white; text-decoration:none; padding:10px 14px; border-radius:8px; font-weight:600; }\n  .btn.secondary { background:transparent; border:1px solid rgba(255,255,255,0.18); color:var(--text); margin-left:8px; }\n  footer { padding:16px 20px; color:var(--muted); font-size:12px; text-align:center; border-top:1px solid rgba(255,255,255,0.08); margin-top:auto; }\n</style>\n</head>\n<body>\n  <div class=\"wrap\">\n    <header>\n      <h1>NBA Data Visualizations</h1>\n      <p>Select a tool below to explore player stats and shot charts.</p>\n    </header>\n    <main class=\"grid\">\n      <section class=\"card\">\n        <h2>Player Stats Explorer</h2>\n        <p>Interactive Streamlit app to explore relationships between player metrics across seasons and teams.</p>\n        <div class=\"actions\">\n          <a class=\"btn\" href=\"/explorer\">Open Explorer</a>\n        </div>\n      </section>\n      <section class=\"card\">\n        <h2>Rolling 40-game Shot Chart</h2>\n        <p>Altair-based half-court shot chart with player filter and animated rolling window.</p>\n        <div class=\"actions\">\n          <a class=\"btn\" href=\"/shots\">View Shot Chart</a>\n        </div>\n      </section>\n    </main>\n    <footer>\n      Served by Flask at /, Streamlit proxied at /nba/.\n    </footer>\n  </div>\n</body>\n</html>
+        <html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NBA Data Visualizations</title>\n<style>\n  :root { --bg:#0b1020; --card:#131a33; --text:#f2f4ff; --muted:#aab1d6; --accent:#5b8cff; }\n  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); }\n  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }\n  .wrap { min-height:100vh; display:flex; flex-direction:column; }\n  header { padding:24px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }\n  header h1 { margin:0; font-size:22px; letter-spacing:0.2px; }\n  header p { margin:6px 0 0; color:var(--muted); font-size:14px; }\n  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; padding:20px; max-width:1000px; width:100%; margin:0 auto; }\n  .card { background:var(--card); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }\n  .card h2 { margin:0; font-size:18px; }\n  .card p { margin:0; color:var(--muted); line-height:1.45; }\n  .actions { margin-top:auto; }\n  .btn { display:inline-block; background:var(--accent); color:white; text-decoration:none; padding:10px 14px; border-radius:8px; font-weight:600; }\n  .btn.secondary { background:transparent; border:1px solid rgba(255,255,255,0.18); color:var(--text); margin-left:8px; }\n  footer { padding:16px 20px; color:var(--muted); font-size:12px; text-align:center; border-top:1px solid rgba(255,255,255,0.08); margin-top:auto; }\n</style>\n</head>\n<body>\n  <div class=\"wrap\">\n    <header>\n      <h1>NBA Data Visualizations</h1>\n      <p>Select a tool below to explore player stats and shot charts.</p>\n    </header>\n    <main class=\"grid\">\n      <section class=\"card\">\n        <h2>Player Stats Explorer</h2>\n        <p>Interactive Streamlit app to explore relationships between player metrics across seasons and teams.</p>\n        <div class=\"actions\">\n          <a class=\"btn\" href=\"http://localhost:8501/nba/\" target=\"_blank\" rel=\"noopener\">Open Explorer</a>\n        </div>\n      </section>\n      <section class=\"card\">\n        <h2>Rolling 40-game Shot Chart</h2>\n        <p>Altair-based half-court shot chart with player filter and animated rolling window.</p>\n        <div class=\"actions\">\n          <a class=\"btn\" href=\"/shots\">View Shot Chart</a>\n        </div>\n      </section>\n    </main>\n    <footer>\n      Served by Flask at /, Streamlit proxied at /nba/.\n    </footer>\n  </div>\n</body>\n</html>
         """
     )
 
 
 @app.get("/explorer")
 def explorer():
-    return (
-        """
-        <!doctype html>
-        <html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NBA Player Stats Explorer</title>\n<style>\n  html, body { margin: 0; padding: 0; height: 100%; }\n  .frame-wrap { height: 100vh; width: 100%; display: flex; flex-direction: column; }\n  header { padding: 12px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border-bottom: 1px solid #eee; }\n  header h1 { font-size: 18px; margin: 0; }\n  .frame { flex: 1; border: 0; width: 100%; }\n</style>\n</head>\n<body>\n  <div class=\"frame-wrap\">\n    <header>\n      <h1>NBA Player Stats Explorer</h1>\n    </header>\n    <iframe class=\"frame\" src=\"/nba/\" allow=\"fullscreen\" loading=\"lazy\"></iframe>\n  </div>\n</body>\n</html>
-        """
-    )
+    from flask import redirect
+    return redirect("http://localhost:8501/nba/", code=302)
 
 def _make_court_df():
     baseline = pd.DataFrame({"x": [0, 100], "y": [4, 4], "group": ["baseline", "baseline"]})
@@ -76,24 +72,11 @@ def _make_court_df():
 
 def _load_shots_df() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    # Prefer explicit path via env var; fallback to repo sample_data
-    parquet_path = os.environ.get(
-        "NBA_PBP_PARQUET_PATH",
-        os.path.join(base_dir, "sample_data", "nba_pbp_combined.parquet"),
-    )
-    if os.path.exists(parquet_path):
-        df_small = pd.read_parquet(parquet_path)
-    else:
-        df_small = pd.DataFrame({
-            "playerNameI": ["V. Wembanyama"] * 5,
-            "gameid": ["G1"] * 5,
-            "timeActual": pd.date_range("2024-01-01", periods=5),
-            "x": [10, 20, 30, 40, 45],
-            "y": [20, 30, 50, 42, 18],
-            "shotResult": ["Made", "Missed", "Made", "Missed", "Made"],
-            "Season": ["2023-24"] * 5,
-            "game_number": [1, 2, 3, 4, 5],
-        })
+    # Read from the repo shots parquet directly
+    parquet_path = os.path.join(base_dir, "sample_data", "nba_shots_min.parquet")
+    if not os.path.exists(parquet_path):
+        raise FileNotFoundError(f"shots parquet not found at {parquet_path}")
+    df_small = pd.read_parquet(parquet_path)
     # Ensure datetime
     if "timeActual" in df_small.columns:
         df_small["timeActual"] = pd.to_datetime(df_small["timeActual"])  # ensure dtype
@@ -180,7 +163,18 @@ def _build_shot_chart_spec(df: pd.DataFrame):
 
 @app.get("/shots")
 def shots():
-    df = _load_shots_df()
+    try:
+        df = _load_shots_df()
+    except FileNotFoundError as e:
+        return (
+            f"""
+            <!doctype html>
+            <html><body style="font-family:sans-serif;padding:24px;">
+            <h2>Data file missing</h2>
+            <p>{str(e)}</p>
+            </body></html>
+            """
+        ), 500
     chart_spec, slider_max = _build_shot_chart_spec(df)
     return (
         """
